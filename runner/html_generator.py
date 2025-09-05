@@ -7,11 +7,11 @@ This module handles HTML generation and saving of Twitter bookmarks.
 
 import json
 import logging
-import requests
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, Set
 
+import requests
 from jinja2 import Template
 
 LOG = logging.getLogger(__name__)
@@ -245,7 +245,8 @@ class HTMLGenerator:
             if 'media' in tweet:
                 for media in tweet['media']:
                     if media['type'] in ['photo', 'video']:
-                        local_path = self.download_media(media['url'], f"{tweet_id}_{media['media_key']}", media['type'])
+                        local_path = self.download_media(media['url'], f"{tweet_id}_{media['media_key']}",
+                                                         media['type'])
                         if local_path:
                             media['url'] = local_path
 
