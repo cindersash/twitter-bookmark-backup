@@ -13,6 +13,8 @@ from typing import Dict, Any, Optional
 import requests
 from jinja2 import Template
 
+from runner.constants import HTML_TEMPLATE
+
 LOG = logging.getLogger(__name__)
 
 
@@ -30,27 +32,24 @@ class HTMLGenerator:
         html_file = self.backup_dir / f"bookmark_{tweet_id}.html"
         return html_file.exists()
 
-    def _get_avatar_path(self, username: str, profile_image_url: str) -> Optional[str]:
+    def _download_avatar_picture(self, username: str, profile_image_url: str):
         """Download and save a user's profile image if it doesn't exist.
 
         Args:
             username: The Twitter username (used for the filename)
             profile_image_url: URL of the profile image to download
-
-        Returns:
-            The filename of the avatar (without path) if successful, None otherwise
         """
         if not profile_image_url:
-            return None
+            return
 
         # Create a clean filename from username (always use .jpg for consistency)
         safe_username = "".join(c if c.isalnum() else "_" for c in username.lower())
         avatar_filename = f"{safe_username}.jpg"
         avatar_path = self.backup_dir / "avatars" / avatar_filename
 
-        # Return filename if file already exists
+        # Don't re-download if we already have the file
         if avatar_path.exists():
-            return avatar_filename
+            return
 
         # Create avatars directory if it doesn't exist
         avatar_path.parent.mkdir(exist_ok=True)
@@ -65,11 +64,8 @@ class HTMLGenerator:
                     f.write(chunk)
 
             LOG.debug(f"Downloaded profile image for {username} to {avatar_path}")
-            return avatar_filename
-            
         except Exception as e:
             LOG.error(f"Failed to download profile image for {username}: {e}")
-            return None
 
     def _media_file_exists(self, tweet_id: str, media_key: str, media_type: str) -> bool:
         """Check if media file for a tweet already exists."""
@@ -162,170 +158,7 @@ class HTMLGenerator:
     @staticmethod
     def generate_html(tweet: Dict[str, Any]) -> str:
         """Generate HTML for a single bookmark."""
-        template_str = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Twitter Bookmark - {{ tweet.id }}</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            color: #e7e9ea;
-            background-color: #000000;
-            line-height: 1.4;
-        }
-        .tweet {
-            background-color: #16181c;
-            border-radius: 16px;
-            padding: 12px 16px;
-            margin-bottom: 20px;
-        }
-        .tweet-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .avatar {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            margin-right: 12px;
-        }
-        .user-info {
-            flex: 1;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 5px;
-        }
-        .username {
-            font-weight: bold;
-            color: #e7e9ea;
-            text-decoration: none;
-            margin-right: 5px;
-        }
-        .handle, .timestamp {
-            color: #71767b;
-            font-size: 0.9em;
-        }
-        .tweet-content {
-            font-size: 1.1em;
-            margin-bottom: 12px;
-            line-height: 1.4;
-            white-space: pre-wrap;
-            margin-left: 60px; /* Match avatar width + margin */
-        }
-        .tweet-media {
-            margin: 12px 0 12px 60px; /* Match avatar width + margin */
-        }
-        .tweet-media img,
-        .tweet-media video {
-            max-width: 100%;
-            border-radius: 16px;
-            margin-top: 10px;
-        }
-        .tweet-stats {
-            display: flex;
-            gap: 20px;
-            color: #71767b;
-            font-size: 0.9em;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid #2f3336;
-            margin-left: 60px; /* Match avatar width + margin */
-        }
-        .backup-info {
-            font-size: 0.8em;
-            color: #71767b;
-            text-align: center;
-            margin-top: 20px;
-        }
-        .backup-info a {
-            color: #1d9bf0;
-            text-decoration: none;
-        }
-        .backup-info a:hover {
-            text-decoration: underline;
-        }
-        .metadata {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .separator {
-            color: #71767b;
-            font-size: 0.9em;
-        }
-    </style>
-</head>
-<body>
-    <div class="tweet">
-        <div class="tweet-header">
-            {% set author = tweet.author %}
-            {% set username = author.username if author is mapping else author.username %}
-            {% set display_name = author.name if author is mapping else author.name %}
-            {% set safe_username = username|lower|replace('@', '')|replace(' ', '_')|replace('.', '_') }}
-            {% set avatar_src = 'avatars/' ~ safe_username ~ '.jpg' %}
-            
-            <img src="{{ avatar_src }}" alt="Profile" class="avatar" onerror="this.src='data:image/svg+xml;charset=UTF-8,<svg%20width%3D\'48\'%20height%3D\'48\'%20viewBox%3D\'0%200%2048%2048\'%20xmlns%3D\'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg\'><rect%20width%3D\'48\'%20height%3D\'48\'%20fill%3D\'%23e7e9ea\'%2F><text%20x%3D\'50%\'%20y%3D\'60%\'%20font-size%3D\'24\'%20text-anchor%3D\'middle\'%20fill%3D\'%2371767b\'>{{ display_name|first|upper }}<\/text><\/svg>'">
-            <div class="user-info">
-                <a href="https://x.com/{{ username }}" class="username">
-                    {{ display_name }}
-                </a>
-                <span class="handle">@{{ username }}</span>
-                <span class="separator">·</span>
-                <span class="timestamp">{{ tweet.created_at }}</span>
-            </div>
-            {% else %}
-            <div class="user-info">
-                <span class="username">Unknown User</span>
-                <span class="separator">·</span>
-                <span class="timestamp">{{ tweet.created_at }}</span>
-            </div>
-            {% endif %}
-        </div>
-        
-        <div class="tweet-content">
-            {{ tweet.text | safe }}
-        </div>
-        
-        {% if tweet.media %}
-        <div class="tweet-media">
-            {% for media in tweet.media %}
-                {% if media.type == 'photo' %}
-                    <img src="{{ media.url }}" alt="Tweet image">
-                {% elif media.type == 'video' %}
-                    <video controls>
-                        <source src="{{ media.url }}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                {% endif %}
-            {% endfor %}
-        </div>
-        {% endif %}
-        
-        <div class="tweet-stats">
-            <span>❤️ {{ tweet.public_metrics.like_count if tweet.public_metrics else 0 }}</span>
-            <span>🔄 {{ tweet.public_metrics.retweet_count if tweet.public_metrics else 0 }}</span>
-            <span>💬 {{ tweet.public_metrics.reply_count if tweet.public_metrics else 0 }}</span>
-        </div>
-    </div>
-    
-    <div class="backup-info">
-        Bookmark backed up on {{ backup_date }} | 
-        Original: <a href="https://twitter.com/{{ tweet.author.username if tweet.author else 'unknown' }}/status/{{ tweet.id }}" target="_blank">View on X</a>
-    </div>
-</body>
-</html>
-        """
-
-        template = Template(template_str)
+        template = Template(HTML_TEMPLATE)
         return template.render(
             tweet=tweet,
             backup_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -359,7 +192,7 @@ class HTMLGenerator:
                 )
                 
                 if profile_image_url:
-                    self._get_avatar_path(username, profile_image_url)
+                    self._download_avatar_picture(username, profile_image_url)
             
             # Download media if present and not already downloaded
             if 'media' in tweet:
