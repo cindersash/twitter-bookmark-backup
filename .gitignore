@@ -3,4 +3,4 @@ venv/
 config.json
 __pycache__/
 oauth2_token.json
-bookmark_backup.log
+*.log
