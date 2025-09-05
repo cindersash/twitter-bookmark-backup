@@ -57,7 +57,7 @@ class TwitterBookmarkBackup:
                     'attachments', 'entities', 'context_annotations'
                 ],
                 user_fields=['id', 'name', 'username', 'profile_image_url'],
-                media_fields=['media_key', 'type', 'url', 'preview_image_url'],
+                media_fields=['media_key', 'type', 'url', 'preview_image_url', 'variants'],
                 expansions=['author_id', 'attachments.media_keys']
             )
 
@@ -85,11 +85,35 @@ class TwitterBookmarkBackup:
                     for media_key in tweet.attachments['media_keys']:
                         if media_key in media:
                             media_obj = media[media_key]
-                            bookmark_data['media'].append({
-                                'media_key': media_obj.media_key,
-                                'type': media_obj.type,
-                                'url': media_obj.url or media_obj.preview_image_url
-                            })
+                            
+                            # Handle different media types
+                            if media_obj.type == 'video':
+                                # For videos, try to get the best quality video URL from variants
+                                video_url = None
+                                if hasattr(media_obj, 'variants') and media_obj.variants:
+                                    # Find the highest quality video variant
+                                    video_variants = [v for v in media_obj.variants if v.get('content_type', '').startswith('video/')]
+                                    if video_variants:
+                                        # Sort by bitrate to get the highest quality
+                                        video_variants.sort(key=lambda x: x.get('bit_rate', 0), reverse=True)
+                                        video_url = video_variants[0].get('url')
+                                
+                                # Fallback to preview image if no video URL found
+                                if not video_url:
+                                    video_url = media_obj.preview_image_url
+                                
+                                bookmark_data['media'].append({
+                                    'media_key': media_obj.media_key,
+                                    'type': media_obj.type,
+                                    'url': video_url
+                                })
+                            else:
+                                # For photos and other media types, use the standard URL
+                                bookmark_data['media'].append({
+                                    'media_key': media_obj.media_key,
+                                    'type': media_obj.type,
+                                    'url': media_obj.url or media_obj.preview_image_url
+                                })
 
                 bookmarks.append(bookmark_data)
 

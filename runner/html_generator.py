@@ -39,11 +39,42 @@ class HTMLGenerator:
         with open(self.saved_bookmarks_file, 'w') as f:
             json.dump(list(self.saved_bookmarks), f)
 
-    def download_media(self, media_url: str, filename: str) -> Optional[str]:
+    def download_media(self, media_url: str, filename: str, media_type: str = None) -> Optional[str]:
         """Download media file and return local path."""
         try:
             response = requests.get(media_url, stream=True)
             response.raise_for_status()
+
+            # Determine file extension based on content type or media type
+            content_type = response.headers.get('content-type', '').lower()
+            if 'video/' in content_type:
+                if 'mp4' in content_type:
+                    extension = '.mp4'
+                elif 'webm' in content_type:
+                    extension = '.webm'
+                elif 'quicktime' in content_type:
+                    extension = '.mov'
+                else:
+                    extension = '.mp4'  # Default for video
+            elif 'image/' in content_type:
+                if 'jpeg' in content_type or 'jpg' in content_type:
+                    extension = '.jpg'
+                elif 'png' in content_type:
+                    extension = '.png'
+                elif 'gif' in content_type:
+                    extension = '.gif'
+                else:
+                    extension = '.jpg'  # Default for image
+            elif media_type == 'video':
+                extension = '.mp4'  # Default for video
+            elif media_type == 'photo':
+                extension = '.jpg'  # Default for photo
+            else:
+                extension = ''  # No extension if we can't determine
+
+            # Add extension to filename if not already present
+            if extension and not filename.endswith(extension):
+                filename += extension
 
             media_path = self.backup_dir / "media" / filename
             media_path.parent.mkdir(exist_ok=True)
@@ -214,7 +245,7 @@ class HTMLGenerator:
             if 'media' in tweet:
                 for media in tweet['media']:
                     if media['type'] in ['photo', 'video']:
-                        local_path = self.download_media(media['url'], f"{tweet_id}_{media['media_key']}")
+                        local_path = self.download_media(media['url'], f"{tweet_id}_{media['media_key']}", media['type'])
                         if local_path:
                             media['url'] = local_path
 
