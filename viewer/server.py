@@ -14,7 +14,11 @@ LOG = logging.getLogger(__name__)
 
 def create_app():
     """Create and configure the Flask app."""
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='static')
+    
+    # Ensure the static directory exists
+    static_dir = Path('viewer/static')
+    static_dir.mkdir(exist_ok=True)
 
     # Get the bookmark backup directory
     bookmark_dir = Path("viewer/bookmarks")
@@ -89,9 +93,12 @@ def create_app():
                     html_content = f.read()
 
                 tweet_content = extract_tweet_content(html_content)
+                # Extract tweet ID from filename (bookmark_<tweet_id>.html)
+                tweet_id = filename.replace('bookmark_', '').replace('.html', '')
                 bookmarks.append({
                     'filename': filename,
-                    'content': tweet_content
+                    'content': tweet_content,
+                    'id': tweet_id
                 })
             except Exception as e:
                 LOG.error(f"Failed to process {filename}: {e}")
@@ -118,6 +125,11 @@ def create_app():
         """Serve media files."""
         media_dir = Path("bookmarks/media")
         return send_from_directory(media_dir, filename)
+        
+    @app.route('/favicon.ico')
+    def favicon():
+        """Serve the favicon.ico file."""
+        return send_from_directory(app.static_folder, 'favicon.ico')
 
     return app
 

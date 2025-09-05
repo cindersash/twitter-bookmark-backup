@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Twitter Bookmarks - All Bookmarks</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -231,7 +232,28 @@
                 data.bookmarks.forEach(bookmark => {
                     const bookmarkElement = document.createElement('div');
                     bookmarkElement.className = 'bookmark-item';
-                    bookmarkElement.innerHTML = bookmark.content;
+                    
+                    // Create a wrapper div to hold the tweet content and the original link
+                    const wrapper = document.createElement('div');
+                    wrapper.style.position = 'relative';
+                    wrapper.innerHTML = bookmark.content;
+                    
+                    // Create and style the original tweet link
+                    const originalLink = document.createElement('a');
+                    originalLink.href = `https://x.com/i/web/status/${bookmark.id}`;
+                    originalLink.target = '_blank';
+                    originalLink.rel = 'noopener noreferrer';
+                    originalLink.textContent = 'View on X';
+                    originalLink.style.position = 'absolute';
+                    originalLink.style.bottom = '10px';
+                    originalLink.style.right = '15px';
+                    originalLink.style.color = '#1d9bf0';
+                    originalLink.style.textDecoration = 'none';
+                    originalLink.style.fontSize = '0.9em';
+                    originalLink.style.fontWeight = '500';
+                    
+                    wrapper.appendChild(originalLink);
+                    bookmarkElement.appendChild(wrapper);
                     bookmarksContainer.appendChild(bookmarkElement);
                 });
                 
