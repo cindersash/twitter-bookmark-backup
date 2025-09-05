@@ -7,7 +7,7 @@ import logging
 import re
 from pathlib import Path
 
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, render_template, send_from_directory, request, jsonify
 
 LOG = logging.getLogger(__name__)
 
@@ -58,14 +58,31 @@ def create_app():
     @app.route('/')
     def index():
         """Main page showing all bookmarks."""
+        return render_template('index.html')
+
+    @app.route('/api/bookmarks')
+    def get_bookmarks():
+        """API endpoint to get paginated bookmarks."""
+        page = int(request.args.get('page', 1))
+        per_page = 10  # Number of bookmarks per page
+        
         bookmark_files = get_bookmark_files()
-
+        total_bookmarks = len(bookmark_files)
+        
         if not bookmark_files:
-            return render_template('index.html', bookmarks=[], message="No bookmarks found")
-
-        # Extract content from each bookmark file
+            return jsonify({
+                'bookmarks': [],
+                'has_more': False,
+                'total': 0
+            })
+        
+        # Calculate start and end indices for pagination
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        
+        # Extract content for the current page
         bookmarks = []
-        for filename in bookmark_files:
+        for filename in bookmark_files[start_idx:end_idx]:
             try:
                 file_path = bookmark_dir / filename
                 with open(file_path, 'r', encoding='utf-8') as f:
@@ -76,15 +93,20 @@ def create_app():
                     'filename': filename,
                     'content': tweet_content
                 })
-
             except Exception as e:
                 LOG.error(f"Failed to process {filename}: {e}")
                 bookmarks.append({
                     'filename': filename,
                     'content': f"<div class='error'>Failed to load {filename}: {e}</div>"
                 })
-
-        return render_template('index.html', bookmarks=bookmarks)
+        
+        has_more = end_idx < total_bookmarks
+        
+        return jsonify({
+            'bookmarks': bookmarks,
+            'has_more': has_more,
+            'total': total_bookmarks
+        })
 
     @app.route('/bookmark/<filename>')
     def serve_bookmark(filename):

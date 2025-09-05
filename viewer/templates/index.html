@@ -174,22 +174,111 @@
         <div class="error-message">{{ message }}</div>
     {% endif %}
     
-    {% if bookmarks %}
+    {% if True %}
         <div class="stats">
-            <span>Total Bookmarks: <span class="count">{{ bookmarks|length }}</span></span>
+            <span>Loading bookmarks...</span>
         </div>
         
-        <div class="bookmarks-container">
-            {% for bookmark in bookmarks %}
-            <div class="bookmark-item">
-                {{ bookmark.content|safe }}
-            </div>
-            {% endfor %}
+        <div class="bookmarks-container" id="bookmarks-container">
+            <!-- Bookmark items will be loaded here dynamically -->
+        </div>
+        <div id="loading" class="loading" style="text-align: center; padding: 20px; display: none;">
+            Loading more bookmarks...
+        </div>
+        <div id="no-more" class="no-more" style="text-align: center; padding: 20px; color: #71767b; display: none;">
+            No more bookmarks to load
         </div>
     {% else %}
         <div class="no-bookmarks">
             <p>No bookmarks found. Make sure you have run the backup script first.</p>
         </div>
     {% endif %}
+
+    <script>
+        let currentPage = 1;
+        let isLoading = false;
+        let hasMore = true;
+        const bookmarksContainer = document.getElementById('bookmarks-container');
+        const loadingElement = document.getElementById('loading');
+        const noMoreElement = document.getElementById('no-more');
+        const statsElement = document.querySelector('.stats');
+        let totalBookmarks = 0;
+
+        // Function to load bookmarks
+        async function loadBookmarks() {
+            if (isLoading || !hasMore) return;
+            
+            isLoading = true;
+            loadingElement.style.display = 'block';
+            
+            try {
+                const response = await fetch(`/api/bookmarks?page=${currentPage}`);
+                const data = await response.json();
+                
+                // Update total bookmarks count on first load
+                if (currentPage === 1 && data.total > 0) {
+                    totalBookmarks = data.total;
+                    if (statsElement) {
+                        statsElement.innerHTML = `
+                            <span>Total Bookmarks: <span class="count">${totalBookmarks}</span></span>
+                            <span>•</span>
+                            <span>Showing: <span class="count" id="showing-count">0</span> of ${totalBookmarks}</span>
+                        `;
+                    }
+                }
+                
+                // Add bookmarks to the page
+                data.bookmarks.forEach(bookmark => {
+                    const bookmarkElement = document.createElement('div');
+                    bookmarkElement.className = 'bookmark-item';
+                    bookmarkElement.innerHTML = bookmark.content;
+                    bookmarksContainer.appendChild(bookmarkElement);
+                });
+                
+                // Update showing count
+                const showingCount = document.querySelectorAll('.bookmark-item').length;
+                const showingElement = document.getElementById('showing-count');
+                if (showingElement) {
+                    showingElement.textContent = Math.min(showingCount, totalBookmarks);
+                }
+                
+                // Update pagination state
+                hasMore = data.has_more;
+                currentPage++;
+                
+                if (!hasMore) {
+                    noMoreElement.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading bookmarks:', error);
+                // Show error message
+                const errorElement = document.createElement('div');
+                errorElement.className = 'error-message';
+                errorElement.textContent = 'Failed to load bookmarks. Please try again.';
+                bookmarksContainer.appendChild(errorElement);
+            } finally {
+                isLoading = false;
+                loadingElement.style.display = 'none';
+            }
+        }
+        
+        // Check if user has scrolled to the bottom
+        function checkScroll() {
+            const scrollPosition = window.innerHeight + window.scrollY;
+            const pageHeight = document.documentElement.scrollHeight - 100; // 100px buffer
+            
+            if (scrollPosition >= pageHeight && !isLoading && hasMore) {
+                loadBookmarks();
+            }
+        }
+        
+        // Add scroll event listener
+        window.addEventListener('scroll', checkScroll);
+        
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBookmarks();
+        });
+    </script>
 </body>
 </html>
