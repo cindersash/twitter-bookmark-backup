@@ -29,37 +29,43 @@ class HTMLGenerator:
         """Check if HTML file for a tweet already exists."""
         html_file = self.backup_dir / f"bookmark_{tweet_id}.html"
         return html_file.exists()
-        
-    def _get_avatar_path(self, username: str, profile_image_url: str) -> Optional[Path]:
-        """Get local path for a user's profile image, downloading if necessary."""
+
+    def _get_avatar_path(self, username: str, profile_image_url: str) -> Optional[str]:
+        """Download and save a user's profile image if it doesn't exist.
+
+        Args:
+            username: The Twitter username (used for the filename)
+            profile_image_url: URL of the profile image to download
+
+        Returns:
+            The filename of the avatar (without path) if successful, None otherwise
+        """
         if not profile_image_url:
             return None
-            
-        # Extract file extension from URL (usually .jpg or .png)
-        extension = Path(profile_image_url).suffix
-        if not extension:  # Default to .jpg if no extension found
-            extension = '.jpg'
-            
-        # Create a clean filename from username
-        safe_username = "".join(c if c.isalnum() else "_" for c in username)
-        avatar_filename = f"{safe_username}{extension}"
+
+        # Create a clean filename from username (always use .jpg for consistency)
+        safe_username = "".join(c if c.isalnum() else "_" for c in username.lower())
+        avatar_filename = f"{safe_username}.jpg"
         avatar_path = self.backup_dir / "avatars" / avatar_filename
-        
-        # Return path if file already exists
+
+        # Return filename if file already exists
         if avatar_path.exists():
-            return avatar_path
-            
+            return avatar_filename
+
+        # Create avatars directory if it doesn't exist
+        avatar_path.parent.mkdir(exist_ok=True)
+
         # Download the avatar if it doesn't exist
         try:
             response = requests.get(profile_image_url, stream=True)
             response.raise_for_status()
-            
+
             with open(avatar_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
-                    
+
             LOG.debug(f"Downloaded profile image for {username} to {avatar_path}")
-            return avatar_path
+            return avatar_filename
             
         except Exception as e:
             LOG.error(f"Failed to download profile image for {username}: {e}")
@@ -261,13 +267,18 @@ class HTMLGenerator:
 <body>
     <div class="tweet">
         <div class="tweet-header">
-            {% if tweet.author %}
-            <img src="{{ tweet.author.profile_image_url }}" alt="Profile" class="avatar">
+            {% set author = tweet.author %}
+            {% set username = author.username if author is mapping else author.username %}
+            {% set display_name = author.name if author is mapping else author.name %}
+            {% set safe_username = username|lower|replace('@', '')|replace(' ', '_')|replace('.', '_') }}
+            {% set avatar_src = 'avatars/' ~ safe_username ~ '.jpg' %}
+            
+            <img src="{{ avatar_src }}" alt="Profile" class="avatar" onerror="this.src='data:image/svg+xml;charset=UTF-8,<svg%20width%3D\'48\'%20height%3D\'48\'%20viewBox%3D\'0%200%2048%2048\'%20xmlns%3D\'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg\'><rect%20width%3D\'48\'%20height%3D\'48\'%20fill%3D\'%23e7e9ea\'%2F><text%20x%3D\'50%\'%20y%3D\'60%\'%20font-size%3D\'24\'%20text-anchor%3D\'middle\'%20fill%3D\'%2371767b\'>{{ display_name|first|upper }}<\/text><\/svg>'">
             <div class="user-info">
-                <a href="https://twitter.com/{{ tweet.author.username }}" class="username">
-                    {{ tweet.author.name }}
+                <a href="https://twitter.com/{{ username }}" class="username">
+                    {{ display_name }}
                 </a>
-                <span class="handle">@{{ tweet.author.username }}</span>
+                <span class="handle">@{{ username }}</span>
                 <span class="separator">·</span>
                 <span class="timestamp">{{ tweet.created_at }}</span>
             </div>
@@ -331,12 +342,24 @@ class HTMLGenerator:
                 return False
 
             # Download profile image if author exists and has a profile image
-            if tweet.get('author') and tweet['author'].get('profile_image_url'):
-                username = tweet['author'].get('username', 'unknown')
-                avatar_path = self._get_avatar_path(username, tweet['author']['profile_image_url'])
-                if avatar_path:
-                    # Store relative path for web serving
-                    tweet['author']['profile_image_url'] = str(Path("avatars") / avatar_path.name)
+            author = tweet.get('author')
+            if author:
+                # Get username safely regardless of whether author is a dict or object
+                username = (
+                    author.get('username')
+                    if isinstance(author, dict)
+                    else getattr(author, 'username', 'unknown')
+                )
+                
+                # Get profile image URL safely
+                profile_image_url = (
+                    author.get('profile_image_url')
+                    if isinstance(author, dict)
+                    else getattr(author, 'profile_image_url', None)
+                )
+                
+                if profile_image_url:
+                    self._get_avatar_path(username, profile_image_url)
             
             # Download media if present and not already downloaded
             if 'media' in tweet:
