@@ -126,6 +126,12 @@ def create_app():
         media_dir = Path("bookmarks/media")
         return send_from_directory(media_dir, filename)
         
+    @app.route('/avatars/<filename>')
+    def serve_avatar(filename):
+        """Serve avatar images."""
+        avatars_dir = Path("bookmarks/avatars")
+        return send_from_directory(avatars_dir, filename)
+        
     @app.route('/favicon.ico')
     def favicon():
         """Serve the favicon.ico file."""

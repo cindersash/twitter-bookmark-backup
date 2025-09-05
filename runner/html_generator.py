@@ -22,11 +22,48 @@ class HTMLGenerator:
     def __init__(self, backup_dir: Path):
         """Initialize the HTML generator with backup directory."""
         self.backup_dir = backup_dir
+        # Create avatars directory if it doesn't exist
+        (self.backup_dir / "avatars").mkdir(exist_ok=True)
 
     def _html_file_exists(self, tweet_id: str) -> bool:
         """Check if HTML file for a tweet already exists."""
         html_file = self.backup_dir / f"bookmark_{tweet_id}.html"
         return html_file.exists()
+        
+    def _get_avatar_path(self, username: str, profile_image_url: str) -> Optional[Path]:
+        """Get local path for a user's profile image, downloading if necessary."""
+        if not profile_image_url:
+            return None
+            
+        # Extract file extension from URL (usually .jpg or .png)
+        extension = Path(profile_image_url).suffix
+        if not extension:  # Default to .jpg if no extension found
+            extension = '.jpg'
+            
+        # Create a clean filename from username
+        safe_username = "".join(c if c.isalnum() else "_" for c in username)
+        avatar_filename = f"{safe_username}{extension}"
+        avatar_path = self.backup_dir / "avatars" / avatar_filename
+        
+        # Return path if file already exists
+        if avatar_path.exists():
+            return avatar_path
+            
+        # Download the avatar if it doesn't exist
+        try:
+            response = requests.get(profile_image_url, stream=True)
+            response.raise_for_status()
+            
+            with open(avatar_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+                    
+            LOG.debug(f"Downloaded profile image for {username} to {avatar_path}")
+            return avatar_path
+            
+        except Exception as e:
+            LOG.error(f"Failed to download profile image for {username}: {e}")
+            return None
 
     def _media_file_exists(self, tweet_id: str, media_key: str, media_type: str) -> bool:
         """Check if media file for a tweet already exists."""
@@ -293,6 +330,14 @@ class HTMLGenerator:
                 LOG.info(f"Bookmark {tweet_id} HTML file already exists, skipping")
                 return False
 
+            # Download profile image if author exists and has a profile image
+            if tweet.get('author') and tweet['author'].get('profile_image_url'):
+                username = tweet['author'].get('username', 'unknown')
+                avatar_path = self._get_avatar_path(username, tweet['author']['profile_image_url'])
+                if avatar_path:
+                    # Store relative path for web serving
+                    tweet['author']['profile_image_url'] = str(Path("avatars") / avatar_path.name)
+            
             # Download media if present and not already downloaded
             if 'media' in tweet:
                 for media in tweet['media']:
