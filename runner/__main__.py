@@ -17,7 +17,6 @@ from typing import List, Dict, Any, Optional
 import requests
 from jinja2 import Template
 from tweepy import Client, OAuth2UserHandler
-import webbrowser
 
 # Configure logging
 logging.basicConfig(
@@ -29,29 +28,30 @@ logging.basicConfig(
     ]
 )
 LOG = logging.getLogger(__name__)
+MAX_RESULTS = 100
+
 
 class TwitterBookmarkBackup:
     """Main class for backing up Twitter bookmarks."""
-    
+
     def __init__(self, config_file: str = "config.json"):
         """Initialize the backup tool with configuration."""
         self.config_file = config_file
         self.config = self._load_config()
         self.client = self._setup_client()
-        self.api = self._setup_api()  # OAuth 2.0 doesn't support API v1.1
         self.backup_dir = Path("bookmark_backups")
         self.backup_dir.mkdir(exist_ok=True)
         self.saved_bookmarks_file = self.backup_dir / "saved_bookmarks.json"
         self.saved_bookmarks = self._load_saved_bookmarks()
-        
+
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration from JSON file."""
         if not os.path.exists(self.config_file):
             self._create_default_config()
-            
+
         with open(self.config_file, 'r') as f:
             return json.load(f)
-    
+
     def _create_default_config(self):
         """Create a default configuration file."""
         default_config = {
@@ -59,14 +59,14 @@ class TwitterBookmarkBackup:
             "client_secret": "your_client_secret_here",
             "redirect_uri": "http://localhost:8080/callback"
         }
-        
+
         with open(self.config_file, 'w') as f:
             json.dump(default_config, f, indent=2)
-            
+
         LOG.info(f"Created default config file: {self.config_file}")
         LOG.info("Please update the config file with your OAuth 2.0 credentials")
         sys.exit(1)
-    
+
     def _get_oauth2_token(self) -> str:
         """Get OAuth 2.0 access token using authorization code flow."""
         try:
@@ -79,10 +79,10 @@ class TwitterBookmarkBackup:
                     if 'access_token' in token_data:
                         LOG.info("Using existing OAuth 2.0 token")
                         return token_data['access_token']
-            
+
             # Start OAuth 2.0 flow
             LOG.info("Starting OAuth 2.0 authorization flow...")
-            
+
             # Create OAuth2UserHandler with HTTPS redirect URI
             oauth2_handler = OAuth2UserHandler(
                 client_id=self.config["client_id"],
@@ -90,34 +90,34 @@ class TwitterBookmarkBackup:
                 redirect_uri="https://localhost:8080/callback",  # Use HTTPS
                 scope=["bookmark.read", "tweet.read", "users.read"]
             )
-            
+
             # Get authorization URL
             auth_url = oauth2_handler.get_authorization_url()
             LOG.info(f"Please visit this URL to authorize the application: {auth_url}")
             LOG.info("After authorization, you will be redirected to a page that may show an error.")
             LOG.info("This is normal - please copy the 'code' parameter from the URL and paste it below.")
-            
+
             # Get authorization code from user input
             auth_code = input("Please enter the authorization code from the callback URL: ").strip()
-            
+
             if not auth_code:
                 LOG.error("No authorization code provided")
                 sys.exit(1)
-            
+
             # Get access token
             access_token = oauth2_handler.fetch_token(auth_code)
-            
+
             # Save token for future use
             with open(token_file, 'w') as f:
                 json.dump(access_token, f, indent=2)
-            
+
             LOG.info("OAuth 2.0 authorization successful!")
             return access_token['access_token']
-            
+
         except Exception as e:
             LOG.error(f"Failed to get OAuth 2.0 token: {e}")
             sys.exit(1)
-    
+
     def _setup_client(self) -> Client:
         """Set up Twitter API v2 client for bookmarks."""
         try:
@@ -130,38 +130,28 @@ class TwitterBookmarkBackup:
         except Exception as e:
             LOG.error(f"Failed to setup Twitter API v2 client: {e}")
             sys.exit(1)
-    
-    def _setup_api(self) -> None:
-        """OAuth 2.0 doesn't support API v1.1, so this method is no longer needed."""
-        LOG.info("OAuth 2.0 authentication - API v1.1 not available")
-        return None
-    
+
     def _load_saved_bookmarks(self) -> set:
         """Load list of already saved bookmarks."""
         if self.saved_bookmarks_file.exists():
             with open(self.saved_bookmarks_file, 'r') as f:
                 return set(json.load(f))
         return set()
-    
+
     def _save_bookmark_id(self, bookmark_id: str):
         """Save a bookmark ID to the saved bookmarks list."""
         self.saved_bookmarks.add(bookmark_id)
         with open(self.saved_bookmarks_file, 'w') as f:
             json.dump(list(self.saved_bookmarks), f)
-    
-    def get_bookmarks(self, max_results: int = 100) -> List[Dict[str, Any]]:
+
+    def get_bookmarks(self) -> List[Dict[str, Any]]:
         """Fetch bookmarks from Twitter API v2."""
         try:
             LOG.info("Fetching bookmarks...")
-            
-            # Get the authenticated user's ID
-            me = self.client.get_me()
-            user_id = me.data.id
-            
+
             # Fetch bookmarks using Twitter API v2
             bookmarks_response = self.client.get_bookmarks(
-                user_id=user_id,
-                max_results=min(max_results, 100),  # API limit is 100 per request
+                max_results=MAX_RESULTS,  # API limit is 100 per request
                 tweet_fields=[
                     'id', 'text', 'created_at', 'author_id', 'public_metrics',
                     'attachments', 'entities', 'context_annotations'
@@ -170,16 +160,16 @@ class TwitterBookmarkBackup:
                 media_fields=['media_key', 'type', 'url', 'preview_image_url'],
                 expansions=['author_id', 'attachments.media_keys']
             )
-            
+
             if not bookmarks_response.data:
                 LOG.info("No bookmarks found")
                 return []
-            
+
             # Process the response to create a more usable format
             bookmarks = []
             users = {user.id: user for user in bookmarks_response.includes.get('users', [])}
             media = {media.media_key: media for media in bookmarks_response.includes.get('media', [])}
-            
+
             for tweet in bookmarks_response.data:
                 bookmark_data = {
                     'id': tweet.id,
@@ -189,7 +179,7 @@ class TwitterBookmarkBackup:
                     'public_metrics': tweet.public_metrics,
                     'media': []
                 }
-                
+
                 # Add media if present
                 if tweet.attachments and 'media_keys' in tweet.attachments:
                     for media_key in tweet.attachments['media_keys']:
@@ -200,36 +190,36 @@ class TwitterBookmarkBackup:
                                 'type': media_obj.type,
                                 'url': media_obj.url or media_obj.preview_image_url
                             })
-                
+
                 bookmarks.append(bookmark_data)
-            
+
             LOG.info(f"Found {len(bookmarks)} bookmarks")
             return bookmarks
-            
+
         except Exception as e:
             LOG.error(f"Failed to fetch bookmarks: {e}")
             LOG.error("Make sure your app has 'bookmarks:read' permission")
             return []
-    
+
     def download_media(self, media_url: str, filename: str) -> Optional[str]:
         """Download media file and return local path."""
         try:
             response = requests.get(media_url, stream=True)
             response.raise_for_status()
-            
+
             media_path = self.backup_dir / "media" / filename
             media_path.parent.mkdir(exist_ok=True)
-            
+
             with open(media_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
-            
+
             return str(media_path.relative_to(self.backup_dir))
-            
+
         except Exception as e:
             LOG.error(f"Failed to download media {media_url}: {e}")
             return None
-    
+
     @staticmethod
     def generate_html(tweet: Dict[str, Any]) -> str:
         """Generate HTML for a single bookmark."""
@@ -365,23 +355,23 @@ class TwitterBookmarkBackup:
 </body>
 </html>
         """
-        
+
         template = Template(template_str)
         return template.render(
             tweet=tweet,
             backup_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
-    
+
     def save_bookmark(self, tweet: Dict[str, Any]) -> bool:
         """Save a single bookmark as HTML."""
         try:
             tweet_id = tweet['id']
-            
+
             # Check if already saved
             if tweet_id in self.saved_bookmarks:
                 LOG.info(f"Bookmark {tweet_id} already saved, skipping")
                 return False
-            
+
             # Download media if present
             if 'media' in tweet:
                 for media in tweet['media']:
@@ -389,40 +379,41 @@ class TwitterBookmarkBackup:
                         local_path = self.download_media(media['url'], f"{tweet_id}_{media['media_key']}")
                         if local_path:
                             media['url'] = local_path
-            
+
             # Generate HTML
             html_content = self.generate_html(tweet)
-            
+
             # Save HTML file
             html_file = self.backup_dir / f"bookmark_{tweet_id}.html"
             with open(html_file, 'w', encoding='utf-8') as f:
                 f.write(html_content)
-            
+
             # Mark as saved
             self._save_bookmark_id(tweet_id)
-            
+
             LOG.info(f"Saved bookmark {tweet_id} to {html_file}")
             return True
-            
+
         except Exception as e:
             LOG.error(f"Failed to save bookmark {tweet.get('id', 'unknown')}: {e}")
             return False
-    
+
     def backup_all_bookmarks(self, max_results: int = 100):
         """Backup all bookmarks."""
         LOG.info("Starting bookmark backup...")
-        
+
         bookmarks = self.get_bookmarks(max_results)
         if not bookmarks:
             LOG.warning("No bookmarks found or failed to fetch bookmarks")
             return
-        
+
         saved_count = 0
         for bookmark in bookmarks:
             if self.save_bookmark(bookmark):
                 saved_count += 1
-        
+
         LOG.info(f"Backup complete! Saved {saved_count} new bookmarks")
+
 
 def main():
     """Main entry point."""
@@ -434,6 +425,7 @@ def main():
     except Exception as e:
         LOG.error(f"Backup failed: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
