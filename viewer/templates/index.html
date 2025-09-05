@@ -6,24 +6,26 @@
     <title>Twitter Bookmarks - All Bookmarks</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
             padding: 20px;
             background-color: #000;
-            color: #fff;
+            color: #e7e9ea;
+            line-height: 1.4;
         }
         
         .header {
             text-align: center;
             margin-bottom: 30px;
-            padding: 20px;
+            padding: 20px 0;
             border-bottom: 1px solid #2f3336;
         }
         
         .header h1 {
             margin: 0;
             font-size: 2.5rem;
-            color: #fff;
+            color: #e7e9ea;
         }
         
         .header p {
@@ -37,7 +39,7 @@
             margin: 20px 0;
             padding: 15px;
             background-color: #16181c;
-            border-radius: 8px;
+            border-radius: 12px;
             border: 1px solid #2f3336;
         }
         
@@ -57,26 +59,80 @@
         }
         
         .bookmark-item {
-            margin-bottom: 30px;
-            border-color: #868686;
-            border-style: solid;
-            border-width: 2px;
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            border-color: #16181c;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 20px;
+            border: 1px solid #2f3336;
         }
-        
-        .bookmark-item img,
-        .bookmark-item video {
+
+        .tweet-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            margin-right: 12px;
+        }
+
+        .user-info {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .username {
+            font-weight: bold;
+            color: #e7e9ea;
+            text-decoration: none;
+            margin-right: 5px;
+        }
+
+        .handle, .timestamp {
+            color: #71767b;
+            font-size: 0.9em;
+        }
+
+        .tweet-content {
+            font-size: 1.1em;
+            margin-bottom: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            margin-left: 0;
+        }
+
+        .tweet-media {
+            margin: 12px 0;
+        }
+
+        .tweet-media img,
+        .tweet-media video {
             max-width: 100%;
-            max-height: 575px;
-            height: auto;
-            border-color: #868686;
-            border-style: solid;
-            border-width: 1px;
-            border-radius: 8px;
-            display: block;
+            max-height: 500px;
+            border-radius: 16px;
             margin-top: 10px;
+            border: 1px solid #2f3336;
+        }
+
+        .tweet-stats {
+            display: flex;
+            gap: 20px;
+            color: #71767b;
+            font-size: 0.9em;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #2f3336;
+        }
+
+        .separator {
+            color: #71767b;
+            font-size: 0.9em;
         }
         
         .no-bookmarks {
@@ -84,6 +140,9 @@
             padding: 40px;
             color: #71767b;
             font-size: 1.2rem;
+            background-color: #16181c;
+            border-radius: 12px;
+            border: 1px solid #2f3336;
         }
         
         .error-message {
@@ -91,7 +150,7 @@
             border: 1px solid #ff6b6b;
             color: #ff6b6b;
             padding: 15px;
-            border-radius: 8px;
+            border-radius: 12px;
             margin: 20px 0;
             text-align: center;
         }
