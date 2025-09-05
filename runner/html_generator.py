@@ -125,22 +125,22 @@ class HTMLGenerator:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bookmark - @{{ tweet.author.username }}</title>
+    <title>Twitter Bookmark - {{ tweet.id }}</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #000;
-            color: #fff;
+            color: #e7e9ea;
+            background-color: #000000;
+            line-height: 1.4;
         }
         .tweet {
-            border: 1px solid #2f3336;
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 20px;
             background-color: #16181c;
+            border-radius: 16px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
         }
         .tweet-header {
             display: flex;
@@ -155,46 +155,69 @@ class HTMLGenerator:
         }
         .user-info {
             flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 5px;
         }
         .username {
             font-weight: bold;
-            color: #fff;
+            color: #e7e9ea;
             text-decoration: none;
+            margin-right: 5px;
         }
-        .handle {
+        .handle, .timestamp {
             color: #71767b;
-            margin-left: 4px;
-        }
-        .timestamp {
-            color: #71767b;
-            font-size: 14px;
+            font-size: 0.9em;
         }
         .tweet-content {
-            font-size: 20px;
-            line-height: 1.4;
+            font-size: 1.1em;
             margin-bottom: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            margin-left: 60px; /* Match avatar width + margin */
         }
         .tweet-media {
-            margin: 12px 0;
+            margin: 12px 0 12px 60px; /* Match avatar width + margin */
         }
-        .tweet-media img, .tweet-media video {
+        .tweet-media img,
+        .tweet-media video {
             max-width: 100%;
-            border-radius: 12px;
+            border-radius: 16px;
+            margin-top: 10px;
         }
         .tweet-stats {
             display: flex;
             gap: 20px;
-            margin-top: 12px;
             color: #71767b;
-            font-size: 14px;
+            font-size: 0.9em;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #2f3336;
+            margin-left: 60px; /* Match avatar width + margin */
         }
         .backup-info {
-            font-size: 12px;
+            font-size: 0.8em;
             color: #71767b;
             text-align: center;
             margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #2f3336;
+        }
+        .backup-info a {
+            color: #1d9bf0;
+            text-decoration: none;
+        }
+        .backup-info a:hover {
+            text-decoration: underline;
+        }
+        .metadata {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .separator {
+            color: #71767b;
+            font-size: 0.9em;
         }
     </style>
 </head>
@@ -208,12 +231,14 @@ class HTMLGenerator:
                     {{ tweet.author.name }}
                 </a>
                 <span class="handle">@{{ tweet.author.username }}</span>
-                <div class="timestamp">{{ tweet.created_at }}</div>
+                <span class="separator">·</span>
+                <span class="timestamp">{{ tweet.created_at }}</span>
             </div>
             {% else %}
             <div class="user-info">
                 <span class="username">Unknown User</span>
-                <div class="timestamp">{{ tweet.created_at }}</div>
+                <span class="separator">·</span>
+                <span class="timestamp">{{ tweet.created_at }}</span>
             </div>
             {% endif %}
         </div>
