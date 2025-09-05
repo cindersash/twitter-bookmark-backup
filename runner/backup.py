@@ -8,9 +8,8 @@ X (Twitter) bookmarks as individual HTML pages.
 
 import json
 import logging
-from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 from .auth import TwitterAuth
 from .html_generator import HTMLGenerator
