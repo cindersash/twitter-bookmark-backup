@@ -75,26 +75,35 @@
                     const bookmarkElement = document.createElement('div');
                     bookmarkElement.className = 'bookmark-item';
                     
-                    // Create a wrapper div to hold the tweet content and the original link
+                    // Create a wrapper div to hold the tweet content
                     const wrapper = document.createElement('div');
-                    wrapper.style.position = 'relative';
                     wrapper.innerHTML = bookmark.content;
                     
-                    // Create and style the original tweet link
-                    const originalLink = document.createElement('a');
-                    originalLink.href = `https://x.com/i/web/status/${bookmark.id}`;
-                    originalLink.target = '_blank';
-                    originalLink.rel = 'noopener noreferrer';
-                    originalLink.textContent = 'View on X';
-                    originalLink.style.position = 'absolute';
-                    originalLink.style.bottom = '10px';
-                    originalLink.style.right = '15px';
-                    originalLink.style.color = '#1d9bf0';
-                    originalLink.style.textDecoration = 'none';
-                    originalLink.style.fontSize = '0.9em';
-                    originalLink.style.fontWeight = '500';
+                    // Find the tweet-stats div in the loaded content
+                    const tweetStats = wrapper.querySelector('.tweet-stats');
+                    if (tweetStats) {
+                        // Create the 'View on X' link
+                        const viewOnX = document.createElement('a');
+                        viewOnX.href = `https://x.com/i/web/status/${bookmark.id}`;
+                        viewOnX.target = '_blank';
+                        viewOnX.rel = 'noopener noreferrer';
+                        viewOnX.textContent = 'View on X';
+                        viewOnX.className = 'view-on-x';
+                        
+                        // Create a container for the stats (to keep them grouped together)
+                        const statsContainer = document.createElement('div');
+                        statsContainer.className = 'stats-container';
+                        
+                        // Move all existing stats into the container
+                        while (tweetStats.firstChild) {
+                            statsContainer.appendChild(tweetStats.firstChild);
+                        }
+                        
+                        // Add the stats container and the view-on-x link to the tweet-stats div
+                        tweetStats.appendChild(statsContainer);
+                        tweetStats.appendChild(viewOnX);
+                    }
                     
-                    wrapper.appendChild(originalLink);
                     bookmarkElement.appendChild(wrapper);
                     bookmarksContainer.appendChild(bookmarkElement);
                 });
