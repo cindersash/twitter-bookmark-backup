@@ -25,7 +25,7 @@ class TwitterBookmarkBackup:
         self.config_file = config_file
         self.auth = TwitterAuth(config_file)
         self.client = self.auth.setup_client()
-        self.backup_dir = Path("bookmark_backups")
+        self.backup_dir = Path("viewer/bookmarks")
         self.backup_dir.mkdir(exist_ok=True)
         self.html_generator = HTMLGenerator(self.backup_dir)
 

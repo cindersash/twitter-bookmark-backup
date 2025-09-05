@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitter Bookmarks - All Bookmarks</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #000;
+            color: #fff;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            border-bottom: 1px solid #2f3336;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            color: #fff;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            color: #71767b;
+            font-size: 1.1rem;
+        }
+        
+        .stats {
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #16181c;
+            border-radius: 8px;
+            border: 1px solid #2f3336;
+        }
+        
+        .stats span {
+            margin: 0 15px;
+            color: #71767b;
+        }
+        
+        .stats .count {
+            color: #1d9bf0;
+            font-weight: bold;
+        }
+        
+        .bookmarks-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .bookmark-item {
+            margin-bottom: 30px;
+        }
+        
+        .no-bookmarks {
+            text-align: center;
+            padding: 40px;
+            color: #71767b;
+            font-size: 1.2rem;
+        }
+        
+        .error-message {
+            background-color: #2d1b1b;
+            border: 1px solid #ff6b6b;
+            color: #ff6b6b;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .error {
+            background-color: #2d1b1b;
+            border: 1px solid #ff6b6b;
+            color: #ff6b6b;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🐦 Twitter Bookmarks</h1>
+        <p>All your saved bookmarks in one place</p>
+    </div>
+    
+    {% if message %}
+        <div class="error-message">{{ message }}</div>
+    {% endif %}
+    
+    {% if bookmarks %}
+        <div class="stats">
+            <span>Total Bookmarks: <span class="count">{{ bookmarks|length }}</span></span>
+        </div>
+        
+        <div class="bookmarks-container">
+            {% for bookmark in bookmarks %}
+            <div class="bookmark-item">
+                {{ bookmark.content|safe }}
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-bookmarks">
+            <p>No bookmarks found. Make sure you have run the backup script first.</p>
+        </div>
+    {% endif %}
+</body>
+</html>
