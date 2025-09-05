@@ -6,12 +6,10 @@ This script automatically backs up your X (Twitter) bookmarks as individual HTML
 that preserve the original tweet appearance with embedded media.
 """
 
-import json
 import logging
 import sys
-from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 from .auth import TwitterAuth
 from .html_generator import HTMLGenerator
@@ -41,8 +39,6 @@ class TwitterBookmarkBackup:
         self.backup_dir.mkdir(exist_ok=True)
         self.saved_bookmarks_file = self.backup_dir / "saved_bookmarks.json"
         self.html_generator = HTMLGenerator(self.backup_dir, self.saved_bookmarks_file)
-
-
 
     def get_bookmarks(self) -> List[Dict[str, Any]]:
         """Fetch bookmarks from Twitter API v2."""
@@ -85,23 +81,24 @@ class TwitterBookmarkBackup:
                     for media_key in tweet.attachments['media_keys']:
                         if media_key in media:
                             media_obj = media[media_key]
-                            
+
                             # Handle different media types
                             if media_obj.type == 'video':
                                 # For videos, try to get the best quality video URL from variants
                                 video_url = None
                                 if hasattr(media_obj, 'variants') and media_obj.variants:
                                     # Find the highest quality video variant
-                                    video_variants = [v for v in media_obj.variants if v.get('content_type', '').startswith('video/')]
+                                    video_variants = [v for v in media_obj.variants if
+                                                      v.get('content_type', '').startswith('video/')]
                                     if video_variants:
                                         # Sort by bitrate to get the highest quality
                                         video_variants.sort(key=lambda x: x.get('bit_rate', 0), reverse=True)
                                         video_url = video_variants[0].get('url')
-                                
+
                                 # Fallback to preview image if no video URL found
                                 if not video_url:
                                     video_url = media_obj.preview_image_url
-                                
+
                                 bookmark_data['media'].append({
                                     'media_key': media_obj.media_key,
                                     'type': media_obj.type,
@@ -124,7 +121,6 @@ class TwitterBookmarkBackup:
             LOG.error(f"Failed to fetch bookmarks: {e}")
             LOG.error("Make sure your app has 'bookmarks:read' permission")
             return []
-
 
     def backup_all_bookmarks(self):
         """Backup all bookmarks."""
