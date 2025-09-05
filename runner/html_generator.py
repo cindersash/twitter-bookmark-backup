@@ -5,11 +5,10 @@ HTML generation module for Twitter Bookmark Backup Tool.
 This module handles HTML generation and saving of Twitter bookmarks.
 """
 
-import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional, Set
+from typing import Dict, Any, Optional
 
 import requests
 from jinja2 import Template
@@ -20,24 +19,52 @@ LOG = logging.getLogger(__name__)
 class HTMLGenerator:
     """Handles HTML generation and saving of Twitter bookmarks."""
 
-    def __init__(self, backup_dir: Path, saved_bookmarks_file: Path):
-        """Initialize the HTML generator with backup directory and saved bookmarks file."""
+    def __init__(self, backup_dir: Path):
+        """Initialize the HTML generator with backup directory."""
         self.backup_dir = backup_dir
-        self.saved_bookmarks_file = saved_bookmarks_file
-        self.saved_bookmarks = self._load_saved_bookmarks()
 
-    def _load_saved_bookmarks(self) -> Set[str]:
-        """Load list of already saved bookmarks."""
-        if self.saved_bookmarks_file.exists():
-            with open(self.saved_bookmarks_file, 'r') as f:
-                return set(json.load(f))
-        return set()
+    def _html_file_exists(self, tweet_id: str) -> bool:
+        """Check if HTML file for a tweet already exists."""
+        html_file = self.backup_dir / f"bookmark_{tweet_id}.html"
+        return html_file.exists()
 
-    def _save_bookmark_id(self, bookmark_id: str):
-        """Save a bookmark ID to the saved bookmarks list."""
-        self.saved_bookmarks.add(bookmark_id)
-        with open(self.saved_bookmarks_file, 'w') as f:
-            json.dump(list(self.saved_bookmarks), f)
+    def _media_file_exists(self, tweet_id: str, media_key: str, media_type: str) -> bool:
+        """Check if media file for a tweet already exists."""
+        # Determine file extension based on media type
+        if media_type == 'video':
+            extension = '.mp4'
+        elif media_type == 'photo':
+            extension = '.jpg'
+        else:
+            extension = ''
+
+        # Check for common extensions if the specific one doesn't exist
+        extensions_to_check = [extension] if extension else ['.jpg', '.png', '.gif', '.mp4', '.webm', '.mov']
+
+        for ext in extensions_to_check:
+            media_file = self.backup_dir / "media" / f"{tweet_id}_{media_key}{ext}"
+            if media_file.exists():
+                return True
+        return False
+
+    def _find_existing_media_file(self, tweet_id: str, media_key: str, media_type: str) -> Optional[Path]:
+        """Find the existing media file for a tweet."""
+        # Determine file extension based on media type
+        if media_type == 'video':
+            extension = '.mp4'
+        elif media_type == 'photo':
+            extension = '.jpg'
+        else:
+            extension = ''
+
+        # Check for common extensions if the specific one doesn't exist
+        extensions_to_check = [extension] if extension else ['.jpg', '.png', '.gif', '.mp4', '.webm', '.mov']
+
+        for ext in extensions_to_check:
+            media_file = self.backup_dir / "media" / f"{tweet_id}_{media_key}{ext}"
+            if media_file.exists():
+                return media_file
+        return None
 
     def download_media(self, media_url: str, filename: str, media_type: str = None) -> Optional[str]:
         """Download media file and return local path."""
@@ -236,19 +263,30 @@ class HTMLGenerator:
         try:
             tweet_id = tweet['id']
 
-            # Check if already saved
-            if tweet_id in self.saved_bookmarks:
-                LOG.info(f"Bookmark {tweet_id} already saved, skipping")
+            # Check if HTML file already exists
+            if self._html_file_exists(tweet_id):
+                LOG.info(f"Bookmark {tweet_id} HTML file already exists, skipping")
                 return False
 
-            # Download media if present
+            # Download media if present and not already downloaded
             if 'media' in tweet:
                 for media in tweet['media']:
                     if media['type'] in ['photo', 'video']:
-                        local_path = self.download_media(media['url'], f"{tweet_id}_{media['media_key']}",
-                                                         media['type'])
-                        if local_path:
-                            media['url'] = local_path
+                        # Check if media file already exists
+                        if self._media_file_exists(tweet_id, media['media_key'], media['type']):
+                            LOG.info(
+                                f"Media file for {tweet_id}_{media['media_key']} already exists, skipping download")
+                            # Update the media URL to point to the local file
+                            # We need to find the actual file with the correct extension
+                            media_file = self._find_existing_media_file(tweet_id, media['media_key'], media['type'])
+                            if media_file:
+                                media['url'] = str(media_file.relative_to(self.backup_dir))
+                        else:
+                            # Download the media
+                            local_path = self.download_media(media['url'], f"{tweet_id}_{media['media_key']}",
+                                                             media['type'])
+                            if local_path:
+                                media['url'] = local_path
 
             # Generate HTML
             html_content = self.generate_html(tweet)
@@ -257,9 +295,6 @@ class HTMLGenerator:
             html_file = self.backup_dir / f"bookmark_{tweet_id}.html"
             with open(html_file, 'w', encoding='utf-8') as f:
                 f.write(html_content)
-
-            # Mark as saved
-            self._save_bookmark_id(tweet_id)
 
             LOG.info(f"Saved bookmark {tweet_id} to {html_file}")
             return True

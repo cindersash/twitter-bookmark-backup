@@ -27,8 +27,7 @@ class TwitterBookmarkBackup:
         self.client = self.auth.setup_client()
         self.backup_dir = Path("bookmark_backups")
         self.backup_dir.mkdir(exist_ok=True)
-        self.saved_bookmarks_file = self.backup_dir / "saved_bookmarks.json"
-        self.html_generator = HTMLGenerator(self.backup_dir, self.saved_bookmarks_file)
+        self.html_generator = HTMLGenerator(self.backup_dir)
 
     def get_bookmarks(self) -> List[Dict[str, Any]]:
         """Fetch bookmarks from Twitter API v2."""
