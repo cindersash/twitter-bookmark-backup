@@ -32,7 +32,7 @@ class TwitterBookmarkBackup:
         self.html_generator = HTMLGenerator(self.backup_dir)
 
     @staticmethod
-    def save_bookmarks_to_disk(data: List[Dict[str, Any]]) -> Path:
+    def save_bookmarks_response_to_disk(data: List[Dict[str, Any]]) -> Path:
         """Save bookmarks data to a JSON file.
         
         Args:
@@ -139,7 +139,7 @@ class TwitterBookmarkBackup:
 
             # Save the API response so we can do easier testing going forward
             if save_to_disk:
-                self.save_bookmarks_to_disk(bookmarks_response.data)
+                self.save_bookmarks_response_to_disk(bookmarks_response.data)
 
             return self.process_bookmarks_response(bookmarks_response)
 
