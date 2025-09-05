@@ -9,8 +9,9 @@ import json
 import logging
 import os
 import sys
+import time
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from tweepy import Client, OAuth2UserHandler
 
@@ -48,6 +49,41 @@ class TwitterAuth:
         LOG.info("Please update the config file with your OAuth 2.0 credentials")
         sys.exit(1)
 
+    def is_token_expired(self, token_data: Dict[str, Any]) -> bool:
+        """Check if the access token is expired."""
+        expires_at = token_data.get('expires_at')
+        if not expires_at:
+            return True  # If we don't know when it expires, assume expired
+            
+        # Add a small buffer (5 minutes) to account for clock skew and network latency
+        current_time = int(time.time()) - 300
+        return current_time >= expires_at
+
+    def refresh_oauth2_token(self, refresh_token: str) -> Optional[Dict[str, Any]]:
+        """Refresh an expired OAuth 2.0 token."""
+        try:
+            oauth2_handler = OAuth2UserHandler(
+                client_id=self.config["client_id"],
+                client_secret=self.config["client_secret"],
+                redirect_uri="https://localhost:8080/callback",
+                scope=["bookmark.read", "tweet.read", "users.read", "offline.access"]
+            )
+            
+            # Refresh the token
+            new_token = oauth2_handler.refresh_token(refresh_token)
+            
+            # Save the new token
+            token_file = Path("oauth2_token.json")
+            with open(token_file, 'w') as f:
+                json.dump(new_token, f, indent=2)
+                
+            LOG.info("Successfully refreshed OAuth 2.0 token")
+            return new_token
+            
+        except Exception as e:
+            LOG.error(f"Failed to refresh OAuth 2.0 token: {e}")
+            return None
+
     def get_oauth2_token(self) -> str:
         """Get OAuth 2.0 access token using authorization code flow."""
         try:
@@ -56,20 +92,32 @@ class TwitterAuth:
             if token_file.exists():
                 with open(token_file, 'r') as f:
                     token_data = json.load(f)
-                    # Check if token is still valid (basic check)
-                    if 'access_token' in token_data:
-                        LOG.info("Using existing OAuth 2.0 token")
+                    
+                # Check if we have a valid access token that's not expired
+                if 'access_token' in token_data:
+                    if not self.is_token_expired(token_data):
+                        LOG.info("Using existing valid OAuth 2.0 token")
                         return token_data['access_token']
+                    
+                    # If token is expired but we have a refresh token, try to refresh it
+                    if 'refresh_token' in token_data:
+                        LOG.info("Access token expired, attempting to refresh...")
+                        new_token = self.refresh_oauth2_token(token_data['refresh_token'])
+                        if new_token and 'access_token' in new_token:
+                            return new_token['access_token']
+                    
+                    LOG.info("Existing token is expired and couldn't be refreshed")
 
             # Start OAuth 2.0 flow
             LOG.info("Starting OAuth 2.0 authorization flow...")
+            LOG.info("You will need to re-authenticate with Twitter.")
 
             # Create OAuth2UserHandler with HTTPS redirect URI
             oauth2_handler = OAuth2UserHandler(
                 client_id=self.config["client_id"],
                 client_secret=self.config["client_secret"],
                 redirect_uri="https://localhost:8080/callback",  # Use HTTPS
-                scope=["bookmark.read", "tweet.read", "users.read"]
+                scope=["bookmark.read", "tweet.read", "users.read", "offline.access"]  # Add offline.access for refresh tokens
             )
 
             # Get authorization URL
