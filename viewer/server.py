@@ -31,6 +31,7 @@ def create_app():
 
         # Sort by filename for consistent ordering
         bookmark_files.sort()
+        bookmark_files.reverse()
         return bookmark_files
 
     def extract_tweet_content(html_content):
@@ -48,11 +49,6 @@ def create_app():
                     content = body_match.group(1)
                 else:
                     content = html_content
-
-            # Fix media paths to use absolute paths for Flask server
-            # Replace src="media\filename" or src="media/filename" with src="/media/filename"
-            content = re.sub(r'src="media[\\/]([^"]+)"', r'src="/media/\1"', content)
-            content = re.sub(r"src='media[\\/]([^']+)'", r"src='/media/\1'", content)
 
             return content
         except Exception as e:
