@@ -275,7 +275,7 @@ class HTMLGenerator:
             
             <img src="{{ avatar_src }}" alt="Profile" class="avatar" onerror="this.src='data:image/svg+xml;charset=UTF-8,<svg%20width%3D\'48\'%20height%3D\'48\'%20viewBox%3D\'0%200%2048%2048\'%20xmlns%3D\'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg\'><rect%20width%3D\'48\'%20height%3D\'48\'%20fill%3D\'%23e7e9ea\'%2F><text%20x%3D\'50%\'%20y%3D\'60%\'%20font-size%3D\'24\'%20text-anchor%3D\'middle\'%20fill%3D\'%2371767b\'>{{ display_name|first|upper }}<\/text><\/svg>'">
             <div class="user-info">
-                <a href="https://twitter.com/{{ username }}" class="username">
+                <a href="https://x.com/{{ username }}" class="username">
                     {{ display_name }}
                 </a>
                 <span class="handle">@{{ username }}</span>

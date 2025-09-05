@@ -90,21 +90,7 @@
                                 // Sanitize the username to match the server-side logic
                                 const sanitizedUsername = username.toLowerCase().replace(/[^a-z0-9]/g, '_');
                                 // Set the source to the local avatar file
-                                avatarImg.src = `/static/avatars/${sanitizedUsername}.jpg`;
-                                
-                                // Add error handler in case the local file doesn't exist
-                                avatarImg.onerror = function() {
-                                    // Fall back to the original source if available
-                                    if (avatarImg.dataset.originalSrc) {
-                                        this.src = avatarImg.dataset.originalSrc;
-                                    } else {
-                                        // Use a default avatar if no original source is available
-                                        this.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM3MTc2N2IiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjAgMjF2LTJhNCA0IDAgMCAwLTQtNEg4YTQgNCAwIDAgMC00IDR2MiI+PC9wYXRoPjxjaXJjbGUgY3g9IjEyIiBjeT0iNyIgcj0iNCI+PC9jaXJjbGU+PC9zdmc+';
-                                    }
-                                };
-                                
-                                // Store original source in data attribute for fallback
-                                avatarImg.dataset.originalSrc = avatarImg.src;
+                                avatarImg.src = `/avatars/${sanitizedUsername}.jpg`;
                             }
                         }
                     }
