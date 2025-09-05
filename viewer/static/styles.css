@@ -3,9 +3,26 @@ body {
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
-    background-color: #000;
-    color: #e7e9ea;
+    background-color: #000 !important;
+    color: #e7e9ea !important;
     line-height: 1.4;
+    color-scheme: dark;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Force dark color scheme for all elements */
+html {
+    background-color: #000 !important;
+    color-scheme: dark !important;
+}
+
+/* Override dark reader background colors */
+[data-darkreader-scheme="dark"],
+[data-darkreader-scheme="dark"] body,
+[data-darkreader-scheme="dark"] .bookmark-item,
+[data-darkreader-scheme="dark"] .header,
+[data-darkreader-scheme="dark"] .stats {
+    background-color: #000 !important;
 }
 
 .header {
@@ -56,7 +73,7 @@ body {
     border-radius: 16px;
     padding: 16px;
     margin-bottom: 20px;
-    border: 1px solid #2f3336;
+    border: 2px solid #2f3336;
 }
 
 .tweet-header {
