@@ -398,11 +398,11 @@ class TwitterBookmarkBackup:
             LOG.error(f"Failed to save bookmark {tweet.get('id', 'unknown')}: {e}")
             return False
 
-    def backup_all_bookmarks(self, max_results: int = 100):
+    def backup_all_bookmarks(self):
         """Backup all bookmarks."""
         LOG.info("Starting bookmark backup...")
 
-        bookmarks = self.get_bookmarks(max_results)
+        bookmarks = self.get_bookmarks()
         if not bookmarks:
             LOG.warning("No bookmarks found or failed to fetch bookmarks")
             return
