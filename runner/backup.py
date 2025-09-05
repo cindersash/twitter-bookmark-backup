@@ -6,9 +6,11 @@ This module contains the main TwitterBookmarkBackup class for backing up
 X (Twitter) bookmarks as individual HTML pages.
 """
 
+import json
 import logging
+from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from .auth import TwitterAuth
 from .html_generator import HTMLGenerator
@@ -29,8 +31,35 @@ class TwitterBookmarkBackup:
         self.backup_dir.mkdir(exist_ok=True)
         self.html_generator = HTMLGenerator(self.backup_dir)
 
-    def get_bookmarks(self) -> List[Dict[str, Any]]:
-        """Fetch bookmarks from Twitter API v2."""
+    @staticmethod
+    def save_bookmarks_to_disk(data: List[Dict[str, Any]]) -> Path:
+        """Save bookmarks data to a JSON file.
+        
+        Args:
+            data: The bookmarks data to save
+            
+        Returns:
+            Path to the saved file
+        """
+        backup_dir = Path('api_responses')
+        backup_dir.mkdir(exist_ok=True)
+        
+        file_path = backup_dir / 'get_bookmarks.json'
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False, default=str)
+            
+        LOG.info(f"Saved bookmarks to {file_path}")
+        return file_path
+        
+    def get_bookmarks(self, save_to_disk: bool = True) -> List[Dict[str, Any]]:
+        """Fetch bookmarks from Twitter API v2.
+        
+        Args:
+            save_to_disk: If True, saves the raw bookmarks data to a JSON file
+            
+        Returns:
+            List of bookmarks with their details
+        """
         try:
             LOG.info("Fetching bookmarks...")
 
@@ -49,6 +78,10 @@ class TwitterBookmarkBackup:
             if not bookmarks_response.data:
                 LOG.info("No bookmarks found")
                 return []
+
+            # Save the API response so we can do easier testing going forward
+            if save_to_disk:
+                self.save_bookmarks_to_disk(bookmarks_response.data)
 
             # Process the response to create a more usable format
             bookmarks = []

@@ -5,3 +5,4 @@ __pycache__/
 oauth2_token.json
 *.log
 bookmark_backups/
+api_responses/
